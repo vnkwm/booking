@@ -27,7 +27,7 @@ class BookingController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'bail|required|string',
-            'email' => 'bail|required|unique:bookings|email',
+            'email' => 'bail|required|email',
             'type' => 'bail|required|in:full day,half day',
             'date' => 'bail|required|date',
             'slot' => 'bail|required|in:morning,evening',
@@ -89,9 +89,26 @@ class BookingController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, string $id): JsonResponse
     {
-        //
+        $booking = Booking::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'bail|required|string',
+            'email' => 'bail|required|email',
+            'type' => 'bail|required|in:full day,half day',
+            'date' => 'bail|required|date',
+            'slot' => 'bail|required|in:morning,evening',
+            'time' => 'bail|required|date_format:H:i'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->messages()->first()], 422);
+        }
+
+        $booking->update($request->all());
+
+        return response()->json($booking);
     }
 
     /**
