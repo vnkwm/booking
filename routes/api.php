@@ -23,3 +23,4 @@ Route::post('/bookings', [BookingController::class, 'store']);
 Route::get('/bookings', [BookingController::class, 'index']);
 Route::get('/booking/{id}', [BookingController::class, 'show']);
 Route::put('/booking/{id}', [BookingController::class, 'update']);
+Route::delete('/booking/{id}', [BookingController::class, 'destroy']);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Booking;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 
 class BookingController extends Controller
@@ -91,31 +92,41 @@ class BookingController extends Controller
      */
     public function update(Request $request, string $id): JsonResponse
     {
-        $booking = Booking::findOrFail($id);
+        try {
+            $booking = Booking::findOrFail($id);
 
-        $validator = Validator::make($request->all(), [
-            'name' => 'bail|required|string',
-            'email' => 'bail|required|email',
-            'type' => 'bail|required|in:full day,half day',
-            'date' => 'bail|required|date',
-            'slot' => 'bail|required|in:morning,evening',
-            'time' => 'bail|required|date_format:H:i'
-        ]);
+            $validator = Validator::make($request->all(), [
+                'name' => 'bail|required|string',
+                'email' => 'bail|required|email',
+                'type' => 'bail|required|in:full day,half day',
+                'date' => 'bail|required|date',
+                'slot' => 'bail|required|in:morning,evening',
+                'time' => 'bail|required|date_format:H:i'
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->messages()->first()], 422);
+            if ($validator->fails()) {
+                return response()->json(['error' => $validator->messages()->first()], 422);
+            }
+
+            $booking->update($request->all());
+
+            return response()->json($booking);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Booking not found'], 404);
         }
-
-        $booking->update($request->all());
-
-        return response()->json($booking);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(string $id): JsonResponse
     {
-        //
+        try {
+            $booking = Booking::findOrFail($id);
+            $booking->delete();
+            return response()->json(['message' => 'Booking deleted successfully']);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Booking not found'], 404);
+        }
     }
 }
