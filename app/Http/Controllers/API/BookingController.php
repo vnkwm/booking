@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Booking;
+use Illuminate\Support\Facades\Validator;
 
 class BookingController extends Controller
 {
@@ -21,16 +22,44 @@ class BookingController extends Controller
      */
     public function store(Request $request)
     {
-        // print_r($request->all());
-        // exit;
-        $request->validate([
-            'name' => 'required|string',
-            'email' => 'required|email',
-            'type' => 'required|in:full day,half day',
-            'date' => 'required|date',
-            'slot' => 'required|in:morning,evening',
-            'time' => 'required|date_format:H:i'
+        $validator = Validator::make($request->all(), [
+            'name' => 'bail|required|string',
+            'email' => 'bail|required|unique:bookings|email',
+            'type' => 'bail|required|in:full day,half day',
+            'date' => 'bail|required|date',
+            'slot' => 'bail|required|in:morning,evening',
+            'time' => 'bail|required|date_format:H:i'
         ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->messages()->first()], 422);
+        }
+
+        $existingBooking = Booking::where('date', $request->date)
+            ->where('slot', $request->slot)
+            ->first();
+
+        if ($existingBooking) {
+            return response()->json(['error' => 'Booking already exists for this date and slot'], 400);
+        }
+
+        if ($request->type === 'full day' && $existingBooking) {
+            return response()->json(['error' => 'Full day booking already exists for this date'], 400);
+        }
+
+        if ($request->type === 'half day' && $existingBooking) {
+            return response()->json(['error' => 'Half day booking already exists for this date'], 400);
+        }
+
+        if ($request->type === 'half day' && $request->slot) {
+            $conflictingFullDayBooking = Booking::where('date', $request->date)
+                ->where('type', 'full day')
+                ->first();
+
+            if ($conflictingFullDayBooking) {
+                return response()->json(['error' => 'Full day booking conflicts with existing half day booking'], 400);
+            }
+        }
 
         $booking = Booking::create([
             'name' => $request->name,
@@ -41,7 +70,7 @@ class BookingController extends Controller
             'time' => $request->time,
         ]);
 
-        return response()->json(['message' => 'Booking created successfully', 'booking' => $booking], 201);
+        return response()->json($booking, 201);
     }
 
     /**
